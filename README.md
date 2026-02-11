@@ -1149,3 +1149,135 @@ http.createServer(async (req, res) => {
 
 
 <!--- End of tools generated section -->
+
+### Screenshot Streaming
+
+Playwright MCP now includes a real-time screenshot streaming feature that allows you to stream browser screenshots over WebSocket to remote viewers. This is useful for:
+
+- **Remote Monitoring**: Watch browser automation from a different computer
+- **Real-time Debugging**: See what Claude/AI is doing as it happens
+- **Live Demonstrations**: Show browser automation to stakeholders in real-time
+- **Multi-viewer Support**: Multiple clients can connect and watch simultaneously
+
+#### Key Features
+
+- **In-Memory Capture**: Screenshots are kept in memory, no disk writes
+- **Configurable Interval**: Capture screenshots at any interval (default: 1 second)
+- **Flexible Format**: Support for both JPEG and PNG formats
+- **Low Latency**: Direct WebSocket streaming for minimal delay
+- **MCP Integration**: Works alongside MCP server - Claude can control while you watch
+
+#### Quick Start
+
+1. **Install the package** (if using programmatically):
+```bash
+npm install @playwright/mcp ws
+```
+
+2. **Start streaming** in your code:
+```javascript
+const { ScreenshotStreamer } = require('@playwright/mcp');
+const { chromium } = require('playwright');
+
+// Launch browser
+const browser = await chromium.launch();
+const page = await browser.newPage();
+
+// Create and start streamer
+const streamer = new ScreenshotStreamer({
+  port: 8765,      // WebSocket port
+  interval: 1000,  // Screenshot every 1 second
+  format: 'jpeg',  // JPEG or PNG
+  quality: 80,     // JPEG quality (1-100)
+});
+
+await streamer.start(page);
+console.log('Streaming on ws://localhost:8765');
+
+// Your browser automation here...
+await page.goto('https://example.com');
+
+// Stop when done
+await streamer.stop();
+```
+
+3. **View the stream**: Open `examples/screenshot-stream-viewer.html` in a browser or create your own viewer:
+```html
+<img id="screenshot" />
+<script>
+  const ws = new WebSocket('ws://localhost:8765');
+  ws.onmessage = (event) => {
+    const { data, format } = JSON.parse(event.data);
+    document.getElementById('screenshot').src = 
+      `data:image/${format};base64,${data}`;
+  };
+</script>
+```
+
+#### Configuration Options
+
+```javascript
+new ScreenshotStreamer({
+  port: 8765,        // WebSocket server port (default: 8765)
+  interval: 1000,    // Capture interval in milliseconds (default: 1000)
+  quality: 80,       // JPEG quality 1-100 (default: 80, PNG ignores this)
+  format: 'jpeg',    // 'jpeg' or 'png' (default: 'jpeg')
+  fullPage: false,   // Capture full page or just viewport (default: false)
+})
+```
+
+#### Using with MCP Server
+
+You can run screenshot streaming alongside the MCP server, allowing Claude/AI to control the browser while you watch in real-time:
+
+```javascript
+const { createConnection, ScreenshotStreamer } = require('@playwright/mcp');
+const { chromium } = require('playwright');
+
+// Create browser and page
+const browser = await chromium.launch({ headless: false });
+const context = await browser.newContext();
+const page = await context.newPage();
+
+// Start screenshot streaming
+const streamer = new ScreenshotStreamer({ port: 8765 });
+await streamer.start(page);
+
+// Create MCP connection with custom context
+const mcpConnection = await createConnection({}, async () => context);
+
+// Now Claude can control the browser via MCP
+// while screenshots stream to connected viewers
+```
+
+#### Examples
+
+See the `examples/` directory for complete working examples:
+- `basic-usage.js` - Simple screenshot streaming
+- `mcp-with-streaming.js` - MCP integration with streaming
+- `screenshot-stream-viewer.html` - Web-based viewer with stats
+- `README.md` - Detailed documentation and usage guide
+
+#### WebSocket Protocol
+
+Messages are sent as JSON:
+```json
+{
+  "type": "screenshot",
+  "format": "jpeg",
+  "data": "base64-encoded-image",
+  "timestamp": 1234567890123
+}
+```
+
+#### Performance Tips
+
+- Use JPEG format for smaller file sizes and better performance
+- Adjust quality (60-80) to balance image quality vs bandwidth
+- Increase interval (2000-3000ms) if real-time is not critical
+- Use viewport-only capture (`fullPage: false`) for better performance
+
+#### Security Note
+
+⚠️ The WebSocket server does not include authentication by default. Only use on trusted networks or add authentication if exposing to the internet.
+

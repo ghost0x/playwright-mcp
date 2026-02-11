@@ -18,6 +18,9 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { Config } from './config';
 import type { BrowserContext } from 'playwright';
+import type { ScreenshotStreamer } from './src/screenshot-stream';
 
 export declare function createConnection(config?: Config, contextGetter?: () => Promise<BrowserContext>): Promise<Server>;
+export { ScreenshotStreamer };
+export type { ScreenshotStreamOptions } from './src/screenshot-stream';
 export {};
