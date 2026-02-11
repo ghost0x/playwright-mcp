@@ -58,6 +58,7 @@ class ScreenshotStreamer {
         this.page = null;
         this.clients = new Set();
         this.isStreaming = false;
+        this.isPaused = false;
         this.options = {
             port: options.port ?? 8765,
             interval: options.interval ?? 1000,
@@ -80,13 +81,25 @@ class ScreenshotStreamer {
         this.wsServer.on('connection', (ws) => {
             console.log('WebSocket client connected');
             this.clients.add(ws);
+            // Resume capture if it was paused
+            if (this.isPaused && this.clients.size > 0) {
+                this.isPaused = false;
+            }
             ws.on('close', () => {
                 console.log('WebSocket client disconnected');
                 this.clients.delete(ws);
+                // Pause capture when no clients are connected
+                if (this.clients.size === 0) {
+                    this.isPaused = true;
+                }
             });
             ws.on('error', (error) => {
                 console.error('WebSocket client error:', error);
                 this.clients.delete(ws);
+                // Pause capture when no clients are connected
+                if (this.clients.size === 0) {
+                    this.isPaused = true;
+                }
             });
         });
         // Start the HTTP server
@@ -103,7 +116,8 @@ class ScreenshotStreamer {
     }
     startCapture() {
         this.intervalId = setInterval(async () => {
-            if (!this.page || !this.isStreaming || this.clients.size === 0) {
+            // Skip capture if paused (no clients connected)
+            if (this.isPaused || !this.page || !this.isStreaming) {
                 return;
             }
             try {

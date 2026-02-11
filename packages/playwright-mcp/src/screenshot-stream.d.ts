@@ -29,6 +29,7 @@ export declare class ScreenshotStreamer {
     private clients;
     private options;
     private isStreaming;
+    private isPaused;
     constructor(options?: ScreenshotStreamOptions);
     start(page: Page): Promise<number>;
     private startCapture;

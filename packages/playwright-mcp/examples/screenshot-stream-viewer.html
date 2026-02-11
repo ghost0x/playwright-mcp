@@ -130,6 +130,7 @@
         let frameCount = 0;
         let lastFrameTime = Date.now();
         let frameTimestamps = [];
+        const FPS_SAMPLE_SIZE = 10; // Number of frames to use for FPS calculation
 
         function connect() {
             const wsUrl = document.getElementById('wsUrl').value;
@@ -160,8 +161,8 @@
                             const latency = now - message.timestamp;
                             frameTimestamps.push(now);
                             
-                            // Keep only last 10 timestamps for FPS calculation
-                            if (frameTimestamps.length > 10) {
+                            // Keep only last FPS_SAMPLE_SIZE timestamps for FPS calculation
+                            if (frameTimestamps.length > FPS_SAMPLE_SIZE) {
                                 frameTimestamps.shift();
                             }
                             

@@ -34,6 +34,7 @@ export class ScreenshotStreamer {
   private clients: Set<WebSocket> = new Set();
   private options: Required<ScreenshotStreamOptions>;
   private isStreaming = false;
+  private isPaused = false;
 
   constructor(options: ScreenshotStreamOptions = {}) {
     this.options = {
@@ -62,15 +63,30 @@ export class ScreenshotStreamer {
     this.wsServer.on('connection', (ws: WebSocket) => {
       console.log('WebSocket client connected');
       this.clients.add(ws);
+      
+      // Resume capture if it was paused
+      if (this.isPaused && this.clients.size > 0) {
+        this.isPaused = false;
+      }
 
       ws.on('close', () => {
         console.log('WebSocket client disconnected');
         this.clients.delete(ws);
+        
+        // Pause capture when no clients are connected
+        if (this.clients.size === 0) {
+          this.isPaused = true;
+        }
       });
 
       ws.on('error', (error) => {
         console.error('WebSocket client error:', error);
         this.clients.delete(ws);
+        
+        // Pause capture when no clients are connected
+        if (this.clients.size === 0) {
+          this.isPaused = true;
+        }
       });
     });
 
@@ -91,7 +107,8 @@ export class ScreenshotStreamer {
 
   private startCapture(): void {
     this.intervalId = setInterval(async () => {
-      if (!this.page || !this.isStreaming || this.clients.size === 0) {
+      // Skip capture if paused (no clients connected)
+      if (this.isPaused || !this.page || !this.isStreaming) {
         return;
       }
 
