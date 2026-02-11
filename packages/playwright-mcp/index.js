@@ -16,4 +16,9 @@
  */
 
 const { createConnection } = require('playwright/lib/mcp/index');
-module.exports = { createConnection };
+const { ScreenshotStreamer } = require('./src/screenshot-stream');
+
+module.exports = { 
+  createConnection,
+  ScreenshotStreamer,
+};
